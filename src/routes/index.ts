@@ -3,8 +3,12 @@ import productRouter from "../services/products";
 import categoryRouter from "../services/categories";
 import userRouter from "../services/users";
 import reviewRouter from "../services/reviews";
+import authRouter from "../services/auth";
 
 const router = Router()
+
+// auth route;
+router.use("/auth",authRouter)
 
 // users route;
 router.use("/users",userRouter);

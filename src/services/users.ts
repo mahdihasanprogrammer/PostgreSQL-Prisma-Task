@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import prisma from "../lib/prisma";
+import { authMiddleware } from "../middleware/auth";
 
 // Initialize Express router for user-related routes
 const userRouter = Router();
@@ -10,74 +11,13 @@ const userRouter = Router();
  * ============================================
  * 
  * This router handles all user-related operations including:
- * - Creating new users
+
  * - Retrieving user data
  * - Updating user information
  * - Deleting users
  */
 
-/**
- * POST /users
- * 
- * Create a new user
- * 
- * Expected Request Body:
- * {
- *   "name": "John Doe",
- *   "email": "john@example.com",
- *   "password": "hashedPassword123",
- *   "role": "CUSTOMER" // Optional, defaults to CUSTOMER
- * }
- * 
- * Returns: Created user object with ID and timestamps
- */
-userRouter.post("/", async (req: Request, res: Response) => {
-  try {
-    // Extract user data from request body
-    const { name, email, password, role, image } = req.body;
 
-    // Validate required fields
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email, and password are required",
-      });
-    }
-
-    // Create user in database using Prisma
-    const newUser = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password, // Note: In production, hash this password!
-        role: role || "USER", // Default role is USER
-        image: image || null, // Optional image URL
-      },
-    });
-
-    // Return success response with created user
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      data: newUser,
-    });
-  } catch (error: any) {
-    // Handle duplicate email error
-    if (error.code === "P2002") {
-      return res.status(400).json({
-        success: false,
-        message: "Email already exists",
-      });
-    }
-
-    // Handle other errors
-    res.status(500).json({
-      success: false,
-      message: "Error creating user",
-      error: error.message,
-    });
-  }
-});
 
 /**
  * GET /users
@@ -135,6 +75,45 @@ userRouter.get("/", async (req: Request, res: Response) => {
  * 
  * Returns: Single user object with all details
  */
+
+userRouter.get("/profile", authMiddleware, async (req: Request, res: Response) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                id: req.user?.userId,
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+                role: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Profile fetched successfully",
+            data: user,
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching profile",
+            error: error.message,
+        });
+    }
+});
+
 userRouter.get("/:id", async (req: Request, res: Response) => {
   try {
     // Extract user ID from URL parameters and cast to string
