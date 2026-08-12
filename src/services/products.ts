@@ -239,7 +239,7 @@ productRouter.delete("/:id", async (req: Request, res: Response) => {
     }
 
     res.status(500).json({
-      success: false,
+      success: false, 
       message: "Error deleting product",
       error: error.message,
     });
